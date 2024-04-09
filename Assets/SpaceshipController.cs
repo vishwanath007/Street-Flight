@@ -17,11 +17,20 @@ public class SpaceshipController : MonoBehaviour
     public float health = 100f;
 
     public ParticleSystem fireEffect;
+    public ParticleSystem MissileEffect;
 
     private bool isSlowMotionActive = false;
     private float slowMotionDuration = 5f;
     private float slowMotionTimer = 0f;
 
+
+    public GameObject missilePrefab;
+    public Transform launchPosition;
+    public Transform currentTarget;
+    private bool isTargetingMode = false;
+
+    private AudioSource audioSource;
+    public AudioClip launchSound; // Launch sound clip
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -37,6 +46,36 @@ public class SpaceshipController : MonoBehaviour
             fireEffect.Stop();
         }
         HandleSlowMotion();
+
+        // Toggle targeting mode with the Ctrl key
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            isTargetingMode = true;
+        }
+        else if (Input.GetKeyUp(KeyCode.LeftControl))
+        {
+            isTargetingMode = false;
+        }
+
+        // Fire missile with right mouse button during targeting mode
+        if (Input.GetMouseButtonDown(0))//isTargetingMode || Input.GetMouseButtonDown(1)) // 1 is the right mouse button
+        {
+            FireMissileAtTarget();
+        }
+    }
+
+
+    void FireMissileAtTarget()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit))
+        {
+            // Assuming your missile script looks for a 'target' Transform
+            currentTarget = hit.collider.transform;
+            FireMissile();
+        }
     }
 
     void HandleSlowMotion()
@@ -119,6 +158,38 @@ public class SpaceshipController : MonoBehaviour
 
         // Gradually return to neutral when there's no input
         ResetRotationToNeutral();
+    }
+
+
+    public void FireMissile()
+    {
+        var explosion = Instantiate(MissileEffect, launchPosition.position, Quaternion.identity);
+        explosion.Play();
+        // Destroy the explosion effect after it has finished
+        Destroy(explosion.gameObject, explosion.main.duration);
+
+        audioSource = gameObject.GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        audioSource.clip = launchSound;
+        audioSource.volume = 1;
+        audioSource.spatialBlend = 1; // Make it 3D sound
+        audioSource.rolloffMode = AudioRolloffMode.Linear;
+        audioSource.maxDistance = 500;
+        audioSource.Play();
+        Destroy(audioSource, launchSound.length);
+
+        GameObject missile = Instantiate(missilePrefab, launchPosition.position, missilePrefab.transform.rotation);
+        missile.GetComponent<Missile>().target = currentTarget;
+
+        if (currentTarget != null)
+        {
+            Vector3 targetDirection = (currentTarget.position - missile.transform.position).normalized;
+            missile.transform.rotation = Quaternion.LookRotation(targetDirection);
+        }
     }
 
     void HandlePCControls()

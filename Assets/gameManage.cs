@@ -34,7 +34,7 @@ public class GameManager : MonoBehaviour
             // Assuming you have a method to check if the spaceship is off the ground
             if (IsSpaceshipOffTheGround())
             {
-                GameOver();
+                //GameOver();
             }
         }
     }
