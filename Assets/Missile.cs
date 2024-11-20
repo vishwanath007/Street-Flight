@@ -17,21 +17,23 @@ public class Missile : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
-        Destroy(gameObject, 2f);
-
+        Destroy(gameObject, 3f);
 
     }
 
     void FixedUpdate()
     {
+        rb.velocity = transform.forward * speed;
+        /*
         if (target != null && !hasCollided)
         {
             Vector3 targetDirection = (target.position - transform.position).normalized;
             float step = turnSpeed * Time.fixedDeltaTime;
             Vector3 newDirection = Vector3.RotateTowards(transform.forward, targetDirection, step, 0.0f);
             rb.rotation = Quaternion.LookRotation(newDirection);
-            rb.velocity = transform.forward * speed;
+            
         }
+        */
     }
 
     void OnCollisionEnter(Collision collision)

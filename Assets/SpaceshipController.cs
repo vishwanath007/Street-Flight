@@ -12,7 +12,7 @@ public class SpaceshipController : MonoBehaviour
     public float maxTilt = 30f;
     public float forwardBackwardTiltFactor = 2f;
     public float gravityEffect = 9.81f; // Gravity effect on the spaceship
-
+    public FixedJoystick joyStick;
     private Rigidbody rb;
     public float health = 100f;
 
@@ -60,7 +60,7 @@ public class SpaceshipController : MonoBehaviour
         // Fire missile with right mouse button during targeting mode
         if (Input.GetMouseButtonDown(0))//isTargetingMode || Input.GetMouseButtonDown(1)) // 1 is the right mouse button
         {
-            FireMissileAtTarget();
+            FireMissile();//FireMissileAtTarget();
         }
     }
 
@@ -139,7 +139,37 @@ public class SpaceshipController : MonoBehaviour
 
     private void HandleMobileControls()
     {
-        // Mobile controls implementation remains unchanged
+        bool isBoosting = Input.GetKey(KeyCode.Space);
+
+        float moveHorizontal = joyStick.Horizontal;//Input.GetAxis("Horizontal");
+        float moveVertical = joyStick.Vertical;
+
+        // Movement
+        Vector3 movement = transform.right * moveHorizontal + transform.forward * moveVertical;
+        rb.velocity = movement * movementSpeed;
+
+        // Check if boosting
+        if (isBoosting)
+        {
+            // Apply an upward force instead of directly changing the velocity.
+            // The ForceMode.Acceleration ignores the mass of the rigidbody, leading to a consistent acceleration.
+            rb.AddForce(Vector3.up * boostMultiplier, ForceMode.Acceleration);
+        }
+        // Yaw control with mouse or Q and E keys
+        float yawInput = Input.GetAxis("Mouse X") + (Input.GetKey(KeyCode.E) ? 1 : 0) - (Input.GetKey(KeyCode.Q) ? 1 : 0);
+        float yaw = yawInput * yawSpeed * Time.deltaTime;
+
+        float pitch = -Input.GetAxis("Mouse Y") * pitchSpeed * Time.deltaTime;
+
+        Quaternion additionalRotation = Quaternion.Euler(pitch, yaw, 0f);
+
+        float pitchAdjustment = moveVertical * forwardBackwardTiltFactor;
+        float targetRoll = Mathf.Clamp(moveHorizontal * -tiltAmount, -maxTilt, maxTilt);
+        float targetPitch = Mathf.Clamp((moveVertical * -tiltAmount) + pitchAdjustment, -maxTilt, maxTilt);
+
+        // Applying the combined rotation including the yaw from Q and E keys
+        Quaternion targetRotation = Quaternion.Euler(0, rb.rotation.eulerAngles.y + yaw, targetRoll);
+        rb.rotation = Quaternion.Lerp(rb.rotation, targetRotation, Time.deltaTime * smoothTilt) * additionalRotation;
     }
 
     void FixedUpdate()
@@ -180,16 +210,17 @@ public class SpaceshipController : MonoBehaviour
         audioSource.rolloffMode = AudioRolloffMode.Linear;
         audioSource.maxDistance = 500;
         audioSource.Play();
+
+
+        GameObject missile = Instantiate(missilePrefab, launchPosition.position, launchPosition.rotation);
         Destroy(audioSource, launchSound.length);
+        //missile.GetComponent<Missile>().target = currentTarget;
 
-        GameObject missile = Instantiate(missilePrefab, launchPosition.position, missilePrefab.transform.rotation);
-        missile.GetComponent<Missile>().target = currentTarget;
-
-        if (currentTarget != null)
-        {
-            Vector3 targetDirection = (currentTarget.position - missile.transform.position).normalized;
-            missile.transform.rotation = Quaternion.LookRotation(targetDirection);
-        }
+        //if (currentTarget != null)
+        //{
+        //    Vector3 targetDirection = (currentTarget.position - missile.transform.position).normalized;
+        //    missile.transform.rotation = Quaternion.LookRotation(targetDirection);
+        //}
     }
 
     void HandlePCControls()
